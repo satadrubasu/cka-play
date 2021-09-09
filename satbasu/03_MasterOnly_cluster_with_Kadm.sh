@@ -22,7 +22,7 @@ EOF
 # Executing the sub commands init, join and upgrade would result in kubeadm writing the KubeletConfiguration 
 #  as a file under /var/lib/kubelet/config.yaml and passing it to the local node kubelet.
 
-kubeadm init --config kubeadm-config.yaml
+sudo kubeadm init --apiserver-advertise-address=192.168.56.2
 # --pod-network-cidr=192
 
 
@@ -43,4 +43,5 @@ kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl versio
 
 # Then you can join any number of worker nodes by running the following on each as root:
 
-# kubeadm join 10.0.2.15:6443 --token b7ngs5.buiqeoza5bbtyno5 --discovery-token-ca-cert-hash sha256:ed410b6114a95c3eb5ebb36252ff2af3dc6a749780d9782f2c137ea7d895f89f
+# kubeadm join 192.168.56.2:6443 --token wqpwwn.ezbmrhia808lcelt \
+	--discovery-token-ca-cert-hash sha256:0df5cc202c2860f00601b2ef7b95f8fb8f81a57ba51d84a8bee1985701244ba6
