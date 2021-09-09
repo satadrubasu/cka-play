@@ -1,0 +1,4 @@
+alias mm='ssh -i /Users/satbasu/git/external/cka-play/.vagrant/machines/master/virtualbox/private_key vagrant@192.168.56.2'
+alias w1='ssh -i /Users/satbasu/git/external/cka-play/.vagrant/machines/node01/virtualbox/private_key vagrant@192.168.56.3'
+alias w2='ssh -i /Users/satbasu/git/external/cka-play/.vagrant/machines/node02/virtualbox/private_key vagrant@192.168.56.4'
+

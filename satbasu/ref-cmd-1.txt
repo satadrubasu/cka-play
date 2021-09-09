@@ -1,0 +1,151 @@
+####
+ sudo apt-get install gparted=0.16.1-1
+sudo ufw status
+sudo journalctl -xe
+
+ cat /etc/os-release
+
+ cd /etc/systemd/system/.kubelet.service.d/*.conf 
+ systemctl daemon-reload 
+ systemctl restart kubelet
+
+ -- certificate decode and check --
+ echo "LS....S0tCg==" | base64 --decode > ~/certificate.crt
+ openssl x509 -in certificate.crt -text -noout
+
+
+ -----
+ kubectl explain pv --recursive
+ ----------
+
+ busybox with --command sleep
+
+ --
+ kubectl create deployment nginx-deploy --image nginx:1.17 --record
+ kubectl rollout history deployment nginx-deploy
+ kubectl set image deployment/nginx-deploy --image nginx:1.17 --record
+
+###### INSTALL using kubeadm ######
+{
+sudo modprobe br_netfilter
+cat <<EOF | sudo tee /etc/modules-load.d/k8s.conf
+br_netfilter
+EOF
+cat <<EOF | sudo tee /etc/sysctl.d/k8s.conf
+net.bridge.bridge-nf-call-ip6tables = 1
+net.bridge.bridge-nf-call-iptables = 1
+EOF
+sudo sysctl --system
+}
+
+---Container runtime DOCKER install --
+ {
+sudo -i
+sudo apt-get update && apt-get install -y \
+    apt-transport-https \
+    ca-certificates \
+    curl \
+    gnupg \
+    lsb-release
+curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
+echo \
+"deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
+$(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+sudo apt-get update && apt-get install -y docker-ce docker-ce-cli containerd.io
+}
+{
+sudo curl -fsSLo /usr/share/keyrings/kubernetes-archive-keyring.gpg https://packages.cloud.google.com/apt/doc/apt-key.gpg
+echo "deb [signed-by=/usr/share/keyrings/kubernetes-archive-keyring.gpg] https://apt.kubernetes.io/ kubernetes-xenial main" | sudo tee /etc/apt/sources.list.d/kubernetes.list
+sudo apt-get update
+sudo apt-get install -y kubelet kubeadm kubectl
+sudo apt-mark hold kubelet kubeadm kubectl
+}
+```
+# kubeadm-config.yaml
+```
+kind: ClusterConfiguration
+apiVersion: kubeadm.k8s.io/v1beta3
+kubernetesVersion: v1.22.1
+networking:
+  podSubnet: 10.244.0.0/16
+---
+kind: KubeletConfiguration
+apiVersion: kubelet.config.k8s.io/v1beta1
+cgroupDriver: systemd
+---
+apiVersion: kubeadm.k8s.io/v1beta2
+kind: InitConfiguration
+localAPIEndpoint:
+  advertiseAddress: "192.168.56.2"
+  bindPort: 6443
+```
+
+kubeadm init --pod-network-cidr 10.244.0.0/16 --apiserver-advertise-address=192.168.56.2 --config kubeadm-config.yaml
+kubectl apply -f "https://cloud.weave.works/k8s/net?k8s-version=$(kubectl version | base64 | tr -d '\n')"
+
+####
+
+{
+sudo systemctl enable docker
+sudo systemctl daemon-reload
+sudo systemctl restart docker
+}
+
+To start using your cluster, you need to run the following as a regular user:
+
+  mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 192.168.56.2:6443 --token 7w7q1e.xlmcio0pgq8dn04w \
+ --discovery-token-ca-cert-hash sha256:b0ff3d2b5d57fede4296212286c901dd25eb597c5c208c4576f762a6f4368cbd 
+
+
+
+
+ E0902 15:45:48.815588   19671 server.go:206] "Failed to load kubelet config file" err="failed to load Kubelet config file /var/lib/kubelet/config.yaml, error failed to read
+Sep 02 15:45:48 kubemaster systemd[1]: kubelet.service: Main process exited, code=exited, status=1/FAILURE
+Sep 02 15:45:48 kubemaster systemd[1]: kubelet.service: Failed with result 'exit-code'.
+
+apt-mark unhold kubelet kubectl && \
+    apt-get update && apt-get install -y kubelet=1.21.0-00 kubectl=1.21.0-00 && \
+    apt-mark hold kubelet kubectl
+lines 3548-3563/3563 (END)
+
+Pages referred 
+
+https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/configure-cgroup-driver/
+https://kubernetes.io/releases/version-skew-policy/
+https://kubernetes.io/docs/tasks/administer-cluster/kubeadm/kubeadm-upgrade/
+
+
+
+
+
+
+
+mkdir -p $HOME/.kube
+  sudo cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+  sudo chown $(id -u):$(id -g) $HOME/.kube/config
+
+Alternatively, if you are the root user, you can run:
+
+  export KUBECONFIG=/etc/kubernetes/admin.conf
+
+You should now deploy a pod network to the cluster.
+Run "kubectl apply -f [podnetwork].yaml" with one of the options listed at:
+  https://kubernetes.io/docs/concepts/cluster-administration/addons/
+
+Then you can join any number of worker nodes by running the following on each as root:
+
+kubeadm join 192.168.56.2:6443 --token nu8ohz.99zji9u90ae4w5vs --discovery-token-ca-cert-hash sha256:2f6cf19933ebcd63af820d4d67b3c0dc0ecd393429450b87296ce595ca1be0d6
