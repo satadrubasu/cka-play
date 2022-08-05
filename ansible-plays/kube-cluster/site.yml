@@ -1,0 +1,10 @@
+- name: Playbook for settinng up base ubuntu nodes to enable k8scluster and install dependencies needed
+  hosts: k8scluster
+  become: yes
+  become_method: sudo
+
+  roles:
+    - role: containerd
+      become: yes
+
+

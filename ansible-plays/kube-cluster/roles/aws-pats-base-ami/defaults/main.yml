@@ -1,0 +1,6 @@
+---
+# defaults file for pats-base-ami
+var_kubeversion: 1.22.2-00
+var_dockerversion: 5:20.10.8~3-0~ubuntu-bionic
+var_containerdversion: 1.4.9-1
+var_helm_bin_location: https://get.helm.sh/helm-v3.7.0-linux-amd64.tar.gz

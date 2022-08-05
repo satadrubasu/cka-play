@@ -1,0 +1,5 @@
+[k8scluster]
+master
+node01
+node02
+

@@ -1,0 +1,301 @@
+---
+# tasks file for pats-base-ami
+## On Vanilla Ubuntu 18.04 perform the following to create kubernetes single node cluster
+## 1. Swap off
+## 2. kubeadm|kubectl|kubelet + hold + kubelet as service
+## 3. kubeadm init + weave network + helm - will not be done
+## 4. Also transfer the offline zip.
+## 5. create th base AMI. , So next playbook and just initialize the cluster.
+
+  - name: Make the Swap inactive as kubernetes pre-requisite
+    become: yes
+    command: swapoff -a
+
+  - name: Remove Swap entry from /etc/fstab
+    become: yes
+    lineinfile:
+      dest: /etc/fstab
+      regexp: swap
+      state: absent
+
+  - name: Installing Prerequisites packages for Kubernetes
+    become: yes
+    apt:
+      name:
+        - apt-transport-https
+        - ca-certificates
+        - curl
+        - gnupg-agent
+        - vim
+        - software-properties-common
+        - lsb-release
+        - unzip
+      state: present
+
+  - name: Docker Install Step - Add Docker’s official GPG key
+    become: yes
+    apt_key:
+      url: https://download.docker.com/linux/ubuntu/gpg
+      state: present
+
+  - name: Docker Install Step - Add Docker Repository
+    become: yes
+    apt_repository:
+      repo: deb https://download.docker.com/linux/ubuntu bionic stable
+      state: present
+      filename: docker
+      mode: 0644
+
+  - name: Docker Install Step - Install Docker Engine {{var_dockerversion}}
+    become: yes
+    apt:
+      name:
+        - docker-ce={{var_dockerversion}}
+        - docker-ce-cli={{var_dockerversion}}
+        - containerd.io={{var_containerdversion}}
+      state: present
+
+  - name: Docker Install Step - Enable service docker, and enable persistently
+    become: yes
+    service:
+      name: docker
+      enabled: yes
+
+  - name: Docker Install Step - Step 1/2 - make docker container used systemd instead of cgroupfs
+    become: yes
+    command: mkdir -p /etc/docker
+
+  - name: Docker Install Step - Step 2/2 - make docker container used systemd instead of cgroupfs
+    become: yes
+    shell: |
+      cat <<' EOF' | sudo tee /etc/docker/daemon.json
+       {
+         "exec-opts": ["native.cgroupdriver=systemd"],
+         "log-driver": "json-file",
+         "log-opts": {
+            "max-size": "100m"
+            },
+         "storage-driver": "overlay2"
+       }
+      EOF
+
+  - name: kubeadm Install Step - Add Google official GPG key
+    become: yes
+    apt_key:
+      url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+      state: present
+
+  - name: kubeadm Install Step - Add Kubernetes Repository
+    become: yes
+    apt_repository:
+      repo: deb http://apt.kubernetes.io/ kubernetes-xenial main
+      state: present
+      filename: kubernetes
+      mode: 0644
+
+  - name: kubeadm Install Step - Installing Kubernetes Cluster Packages version {{var_kubeversion}}
+    become: yes
+    apt:
+      name:
+        - kubeadm={{var_kubeversion}}
+        - kubectl={{var_kubeversion}}
+        - kubelet={{var_kubeversion}}
+      state: present
+
+  - name: kubeadm Install Step - Prevent kubeadm pkgs from being upgraded
+    become: yes
+    dpkg_selections:
+      name: kubeadm
+      selection: hold
+
+  - name: kubeadm Install Step - Prevent kubelet pkgs from being upgraded
+    become: yes
+    dpkg_selections:
+      name: kubelet
+      selection: hold
+
+  - name: kubeadm Install Step - Prevent kubectl pkgs from being upgraded
+    become: yes
+    dpkg_selections:
+      name: kubectl
+      selection: hold
+
+  - name: kubeadm Install Step - Enable service kubelet, and enable persistently
+    become: yes
+    service:
+      name: kubelet
+      enabled: yes
+    #notify: Reboot system -- calls the handlers/main.yml with same name ( doing as step task for now - satbasu )
+  - name: Reboot system
+    become: yes
+    reboot:
+      post_reboot_delay: 10
+      reboot_timeout: 60
+      connect_timeout: 60
+      test_command: uptime
+
+#################### kubeadm init ##################
+#  - name: kubeadm init with pod-cidr - "{{ role_var_pod_network_cidr }}" and api-advertise-address "{{ aws_pvt_ip }}"
+#    become: yes
+#    command: kubeadm init --pod-network-cidr "{{ role_var_pod_network_cidr }}" --apiserver-advertise-address "{{ aws_pvt_ip }}"
+#    run_once: true
+    #delegate_to: "{{ k8s_master_ip }}"
+
+#  - pause: seconds=30
+
+#  - name: Create directory for kube config for {{ ansible_user}}
+#    file:
+#      path: /home/{{ansible_user}}/.kube
+#      state: directory
+#      owner: "{{ ansible_user }}"
+#      group: "{{ ansible_user }}"
+#      mode: '0750'
+
+#  - name: For ROOT USER - export kubeconfig = /etc/kubernetes/admin.conf
+#    become_user: root
+#    become: yes
+#    shell: |
+#      echo 'export KUBECONFIG=/etc/kubernetes/admin.conf' >> $HOME/.bashrc
+#      export KUBECONFIG=/etc/kubernetes/admin.conf
+
+#  - name: Copy /etc/kubernetes/admin.conf to user home directory /home/{{ ansible_user }}/.kube/config.
+#    become_user: root
+#    become: yes
+#    copy:
+#      src: /etc/kubernetes/admin.conf
+#      dest: /home/{{ ansible_user }}/.kube/config
+#      remote_src: yes
+#      owner: "{{ ansible_user }}"
+#      group: "{{ ansible_user }}"
+#      mode: '0600'
+
+#  - name: For ubuntu USER - export kubeconfig = /home/{{ ansible_user }}/.kube/config
+#    become: no
+#    shell: |
+#      echo 'export KUBECONFIG=/home/{{ ansible_user }}/.kube/config' >> $HOME/.bashrc
+#      export KUBECONFIG=/home/{{ ansible_user }}/.kube/config
+
+#  - name: Remove the cache directory.
+#    become: no
+#    file:
+#      path: /home/{{ ansible_user }}/.kube/cache
+#      state: absent
+
+#  - name: Create Pod Network by using weave for respective kubectl version.
+#    become: no
+#    shell: |
+#        kubectl version | base64 | tr -d '\n' > version.txt
+#        cat version.txt
+#    register: version_value
+
+#  - name: Download the weave yaml to local machine first
+#    become: no
+#    shell: |
+#      wget -O weave.yaml "https://cloud.weave.works/k8s/net?k8s-version={{ version_value.stdout }}"
+#
+#  - name: Apply the version specific weavenet yaml
+#    become: yes
+#    become_user: root
+#    environment:
+#       KUBECONFIG: /etc/kubernetes/admin.conf
+#    command:
+#      kubectl apply -f weave.yaml
+
+
+#### HELM Install
+  - name: HELM Install Step - Download binary
+    become: yes
+    get_url:
+      url: "{{var_helm_bin_location}}"
+      dest: ~/
+      mode: '0644'
+
+  - name: HELM Install Step - Extract the binary
+    become: yes
+    shell: |
+      cd ~
+      tar -zxvf helm-*.tar.gz
+
+  - name: HELM Install Step - move binary to /usr/local/bin
+    become: yes
+    shell : |
+      cd ~/
+      mv linux-amd64/helm /usr/local/bin/helm
+
+##### tasks file for pats-offline
+
+  - name: USER - PLEASE CONFIRM the EC2 instance is given the correct role on AWS for S3 bucket access.
+    ansible.builtin.debug:
+      msg: Please confirm with your AWS admin that EC2 has been assigned role to read from S3 bucket {{var_pats_bucket}}
+
+  - name: USER - playbook configured to user pats offline version - {{var_pats_buildfile}}
+    ansible.builtin.debug:
+      msg: Will Install CN PATS offline version {{var_pats_buildfile}}
+
+  - name: Create PATS installation working dir at /users/<user>/pats
+    become: yes
+    file:
+      path: ~/pats
+      state: directory
+      mode: 0755
+
+  - name: Get CN-PATS Offline tar from S3 bucket
+    become: yes
+    command:
+      aws s3 cp {{var_pats_bucket}}{{var_pats_buildfile}} ~/pats/
+
+  - name: Unzip the tgz file
+    become: yes
+    unarchive:
+      src: ~/pats/{{var_pats_buildfile}}
+      dest: ~/pats/
+      remote_src: yes
+
+  - name: Find the extracted .tar file name
+    become: yes
+    find:
+      paths: ~/pats
+      patterns: 'pats*.tar'
+    register: find_result
+
+  - debug:
+      msg: "{{find_result}}"
+  - debug:
+      msg: "{{find_result.matched }}"
+
+
+  - name: Unzip the tgz file ( Check if only found a single .tar file )
+    become: yes
+    unarchive:
+      src: "{{ find_result.files[0].path }}"
+      dest: ~/pats/
+      remote_src: yes
+    when: find_result.matched == 1
+
+  - name: Create PATS directory /pats as root user
+    become: yes
+    become_user: root
+    become_method: sudo
+    file:
+      path: /pats
+      state: directory
+      mode: 0755
+
+  - name: Copy files ~/pats/data to /pats/data
+    become: yes
+    become_user: root
+    become_method: sudo
+    copy:
+      remote_src: True
+      src: /root/pats/data
+      dest: /pats
+
+  - name: Remove old files from ~/pats/data
+    become: yes
+    file:
+      path: ~/pats/data
+      state: absent
+
+  - name: Start local docker registry container with the extraced data from /pats/data
+    become: yes
+    command: docker run -d -p 5000:5000 --name registry -v /pats/data:/var/lib/registry registry:2
