@@ -35,11 +35,16 @@ Run the Ansible playbooks :
 
 
 
-Step1] Install container on each node manually
-Step2] Install kubeadm on all tools
-Step3] Initialize the master server
+Step1] Install containerd on each node manually. 
+       - Ensure conntrolled by systemd
+Step2] Install kubeadm + kubelet + kubectl on all nodes
+       - Ensure kubelet if also controlled by cgroupd
+       - kubelet will not start unless kubeadm instructs it to uptil next step.
+       - swap off
+Step3] Initialize the Control Plane Node . master server ( etcd / apiserver )
+       - Cluster DNS (CoreDNS) will not start up before a network is installed  
 Step4] Ensure Network Pre-requisites are met.
-       - POD Network
+       - POD Network thirparty , and find needful params for kubeadm init.
 Step5] Join Worker Node to Master Node.
 
 https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/install-kubeadm/
@@ -91,3 +96,8 @@ Step 1d] Install CNI plugins:
  > mkdir -p /opt/cni/bin
  > tar Cxzvf /opt/cni/bin cni-plugins-linux-amd64-v1.1.1.tgz
  
+
+Step2a] Install kubeadm , kubelet and kubectl
+      kubeadm version > kubelet and kubectl by one version
+
+  
