@@ -1,0 +1,20 @@
+- name: Playbook for setting up base master ubuntu nodes to enable k8scluster and install dependencies needed
+  hosts: master
+  become: yes
+  become_method: sudo
+
+  roles:
+    - role: 1-containerd
+      become: yes
+
+    - role: 2-kubes
+      become: yes
+
+    - role: 3-cgroupdriver
+      become: yes
+
+    - role: 4-kubeadminit
+      become: yes
+
+    - role: 5-calico
+      become: yes

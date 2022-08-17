@@ -1,0 +1,11 @@
+- name: Playbook for setting up the worker nodes.
+  hosts: workers
+  roles:
+    - role: 1-containerd
+      become: yes
+
+    - role: 2-kubes
+      become: yes
+
+    - role: 3-cgroupdriver
+      become: yes
